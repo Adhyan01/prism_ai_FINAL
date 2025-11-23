@@ -3,24 +3,62 @@ import { useNavigate } from 'react-router-dom';
 import { History, Trash2, Eye, Clock, TrendingUp, Calendar } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import logo from '../assets/logo.png';
+import { useAuth } from '../context/AuthContext';
+import UserProfile from '../components/UserProfile';
+import { db } from '../firebase';
+import { collection, query, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
 
 const HistoryPage = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [history, setHistory] = useState([]);
     const [selectedAnalysis, setSelectedAnalysis] = useState(null);
 
     useEffect(() => {
         loadHistory();
-    }, []);
+    }, [user]);
 
-    const loadHistory = () => {
-        const savedHistory = localStorage.getItem('prism_analysis_history');
-        if (savedHistory) {
-            setHistory(JSON.parse(savedHistory));
+    const loadHistory = async () => {
+        if (user) {
+            try {
+                const q = query(
+                    collection(db, 'users', user.uid, 'analyses'),
+                    orderBy('timestamp', 'desc')
+                );
+                const querySnapshot = await getDocs(q);
+                const analyses = [];
+                querySnapshot.forEach((doc) => {
+                    analyses.push({ id: doc.id, ...doc.data() });
+                });
+                setHistory(analyses);
+                console.log('Loaded history from Firestore:', analyses.length, 'items');
+            } catch (error) {
+                console.error('Error loading from Firestore:', error);
+                // Fall back to localStorage if Firestore fails
+                const savedHistory = localStorage.getItem('prism_analysis_history');
+                if (savedHistory) {
+                    setHistory(JSON.parse(savedHistory));
+                }
+            }
+        } else {
+            // Load from localStorage if not logged in
+            const savedHistory = localStorage.getItem('prism_analysis_history');
+            if (savedHistory) {
+                setHistory(JSON.parse(savedHistory));
+            }
         }
     };
 
-    const deleteItem = (id) => {
+    const deleteItem = async (id) => {
+        if (user) {
+            try {
+                await deleteDoc(doc(db, 'users', user.uid, 'analyses', id));
+                console.log('Deleted from Firestore');
+            } catch (error) {
+                console.error('Error deleting from Firestore:', error);
+            }
+        }
+
         const updated = history.filter(item => item.id !== id);
         setHistory(updated);
         localStorage.setItem('prism_analysis_history', JSON.stringify(updated));
@@ -74,6 +112,11 @@ const HistoryPage = () => {
                     >
                         Pricing
                     </button>
+                    {user ? (
+                        <UserProfile />
+                    ) : (
+                        <button onClick={() => navigate('/signin')} className="text-sm text-white/60 hover:text-white transition-colors">Sign In</button>
+                    )}
                     <button
                         onClick={() => navigate('/studio')}
                         className="px-4 py-2 rounded-full bg-white text-black text-sm font-medium hover:scale-105 transition-transform"

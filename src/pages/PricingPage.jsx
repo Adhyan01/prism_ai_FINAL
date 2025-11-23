@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Sparkles, Zap, Infinity } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import logo from '../assets/logo.png';
+import { useAuth } from '../context/AuthContext';
+import UserProfile from '../components/UserProfile';
 
 const PricingPage = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const plans = [
         {
@@ -88,6 +91,11 @@ const PricingPage = () => {
                     >
                         Home
                     </button>
+                    {user ? (
+                        <UserProfile />
+                    ) : (
+                        <button onClick={() => navigate('/signin')} className="text-sm text-white/60 hover:text-white transition-colors">Sign In</button>
+                    )}
                     <button
                         onClick={() => navigate('/studio')}
                         className="px-4 py-2 rounded-full bg-white text-black text-sm font-medium hover:scale-105 transition-transform"

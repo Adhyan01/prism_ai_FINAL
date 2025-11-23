@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight, Users, Activity, Eye, Play } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import logo from '../assets/logo.png';
-
+import { useAuth } from '../context/AuthContext';
+import UserProfile from '../components/UserProfile';
 
 const LandingPage = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const handleLaunch = () => {
         navigate('/studio');
@@ -18,7 +20,7 @@ const LandingPage = () => {
         <div className="min-h-screen flex flex-col">
             {/* Navbar */}
             <nav className="container mx-auto px-6 py-6 flex justify-between items-center relative z-10">
-                <div className="flex items-center gap-2 font-semibold text-lg tracking-tight text-white/90">
+                <div onClick={() => navigate('/')} className="flex items-center gap-2 font-semibold text-lg tracking-tight text-white/90 cursor-pointer hover:opacity-80 transition-opacity">
                     <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
                         <img src={logo} alt="Prism Logo" className="w-8 h-8 object-contain" />
                     </div>
@@ -31,13 +33,11 @@ const LandingPage = () => {
                     >
                         Pricing
                     </button>
-                    <button onClick={() => navigate('/signin')} className="text-sm text-white/60 hover:text-white transition-colors">Sign In</button>
-                    <button
-                        onClick={handleLaunch}
-                        className="px-4 py-2 rounded-full bg-white text-black text-sm font-medium hover:scale-105 transition-transform"
-                    >
-                        Get Started
-                    </button>
+                    {user ? (
+                        <UserProfile />
+                    ) : (
+                        <button onClick={() => navigate('/signin')} className="text-sm text-white/60 hover:text-white transition-colors">Sign In</button>
+                    )}
                 </div>
             </nav>
 

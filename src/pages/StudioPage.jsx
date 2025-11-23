@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import {
-    Upload, Users, Activity, MessageSquare, AlertCircle, Terminal, Cpu, Eye, ThumbsUp, ThumbsDown, Sparkles, ArrowRight, RefreshCw
+    Upload, Users, Activity, MessageSquare, AlertCircle, Terminal, Cpu, Eye, ThumbsUp, ThumbsDown, Sparkles, ArrowRight, RefreshCw, History
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import logo from '../assets/logo.png';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 // --- API CONFIGURATION ---
 const apiKey = "AIzaSyCOb5wBgXXX9FJDt_AARLTxAnDdHK05EHs";
@@ -312,6 +316,8 @@ const Dashboard = ({ analysis, setStep }) => {
 };
 
 const StudioPage = () => {
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const [step, setStep] = useState(0); // 0: Input, 1: Loading, 2: Dashboard
     const [script, setScript] = useState('');
     const [audience, setAudience] = useState(TARGET_AUDIENCES[1]);
@@ -321,6 +327,7 @@ const StudioPage = () => {
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingStatus, setLoadingStatus] = useState('Initializing Agents...');
     const [error, setError] = useState('');
+
 
     const handleThumbnailUpload = (e) => {
         const file = e.target.files[0];
@@ -406,6 +413,23 @@ const StudioPage = () => {
             const resultText = data.candidates[0].content.parts[0].text;
             const jsonResult = JSON.parse(resultText);
 
+            // Save to Firestore if user is logged in
+            if (user) {
+                try {
+                    await addDoc(collection(db, 'users', user.uid, 'analyses'), {
+                        script,
+                        audience,
+                        thumbnail: thumbnailPreview || null,
+                        analysis: jsonResult,
+                        timestamp: Date.now()
+                    });
+                    console.log('Analysis saved to Firestore');
+                } catch (firestoreError) {
+                    console.error('Error saving to Firestore:', firestoreError);
+                    // Continue even if Firestore save fails
+                }
+            }
+
             clearInterval(interval);
             setLoadingProgress(100);
             setAnalysis(jsonResult);
@@ -423,7 +447,7 @@ const StudioPage = () => {
         <div className="container mx-auto px-6 py-8">
             {step !== 1 && (
                 <nav className="flex justify-between items-center mb-10">
-                    <div className="flex items-center gap-3 font-semibold text-lg tracking-tight text-white/90">
+                    <div onClick={() => navigate('/')} className="flex items-center gap-3 font-semibold text-lg tracking-tight text-white/90 cursor-pointer hover:opacity-80 transition-opacity">
                         <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
                             <img src={logo} alt="Prism Logo" className="w-8 h-8 object-contain" />
                         </div>
@@ -434,6 +458,13 @@ const StudioPage = () => {
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span>
                             Agents Online
                         </div>
+                        <button
+                            onClick={() => navigate('/history')}
+                            className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-sm font-medium text-white transition-colors flex items-center gap-2"
+                        >
+                            <History size={16} />
+                            <span>History</span>
+                        </button>
                     </div>
                 </nav>
             )}
