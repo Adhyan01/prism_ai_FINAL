@@ -36,17 +36,9 @@ const UserProfile = () => {
                 }}
                 className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10"
             >
-                {user.photoURL ? (
-                    <img
-                        src={user.photoURL}
-                        alt={user.displayName || 'User'}
-                        className="w-8 h-8 rounded-full"
-                    />
-                ) : (
-                    <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
-                        <User size={20} className="text-white" />
-                    </div>
-                )}
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center border border-white/20 shadow-lg">
+                    <User size={18} className="text-white" />
+                </div>
                 <span className="text-sm font-medium text-white hidden md:block">
                     {user.displayName || 'User'}
                 </span>

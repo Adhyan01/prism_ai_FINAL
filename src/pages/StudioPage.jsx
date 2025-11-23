@@ -4,11 +4,12 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import {
-    Upload, Users, Activity, MessageSquare, AlertCircle, Terminal, Cpu, Eye, ThumbsUp, ThumbsDown, Sparkles, ArrowRight, RefreshCw, History
+    Upload, Users, Activity, MessageSquare, AlertCircle, Terminal, Cpu, Eye, ThumbsUp, ThumbsDown, Sparkles, ArrowRight, RefreshCw, History, TrendingDown, Lightbulb, AlertTriangle, CheckCircle
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
+import UserProfile from '../components/UserProfile';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
@@ -167,7 +168,7 @@ const LoadingScreen = ({ loadingStatus, loadingProgress }) => (
     </div>
 );
 
-const Dashboard = ({ analysis, setStep }) => {
+const Dashboard = ({ analysis, setStep, thumbnailPreview }) => {
     if (!analysis) return null;
 
     return (
@@ -176,7 +177,10 @@ const Dashboard = ({ analysis, setStep }) => {
             {/* Header */}
             <GlassCard className="flex flex-col md:flex-row justify-between items-center gap-6 !py-4">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-black font-bold text-xl shadow-[0_0_20px_rgba(52,211,153,0.4)]">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-black font-bold text-xl shadow-[0_0_20px_rgba(52,211,153,0.4)] ${analysis.viral_score >= 70 ? 'bg-gradient-to-br from-green-400 to-emerald-600' :
+                        analysis.viral_score >= 40 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
+                            'bg-gradient-to-br from-red-400 to-red-600'
+                        }`}>
                         {analysis.viral_score}
                     </div>
                     <div>
@@ -213,6 +217,7 @@ const Dashboard = ({ analysis, setStep }) => {
                                     axisLine={false}
                                     tickLine={false}
                                     dy={10}
+                                    hide={true}
                                 />
                                 <YAxis
                                     stroke="rgba(255,255,255,0.3)"
@@ -223,8 +228,25 @@ const Dashboard = ({ analysis, setStep }) => {
                                     dx={-10}
                                 />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(20,20,20,0.8)', borderColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: '12px', color: '#fff' }}
-                                    itemStyle={{ color: '#fff' }}
+                                    content={({ active, payload }) => {
+                                        if (active && payload && payload.length) {
+                                            const data = payload[0].payload;
+                                            return (
+                                                <div className="bg-[#1a1a1a] border border-white/10 p-4 rounded-xl shadow-2xl backdrop-blur-md min-w-[200px] max-w-[300px]">
+                                                    <p className="text-white font-medium text-sm mb-3 leading-relaxed">
+                                                        "{data.segment || data.event || '...'}"
+                                                    </p>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${data.score >= 80 ? 'bg-green-500' : data.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                                                        <span className="text-white font-bold text-lg">
+                                                            Score: {data.score}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
                                 />
                                 <ReferenceLine y={50} stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
                                 <defs>
@@ -238,8 +260,26 @@ const Dashboard = ({ analysis, setStep }) => {
                                     dataKey="score"
                                     stroke="url(#lineGradient)"
                                     strokeWidth={4}
-                                    dot={{ fill: '#1e1e1e', strokeWidth: 2, stroke: '#c084fc', r: 4 }}
-                                    activeDot={{ r: 8, fill: '#fff', stroke: 'none' }}
+                                    dot={({ cx, cy, payload, index, data }) => {
+                                        if (index === 0 || !data || !data[index - 1]) return null;
+                                        const prev = data[index - 1].score;
+                                        const curr = payload.score;
+                                        const diff = curr - prev;
+
+                                        // Show dot if change is significant (> 5% drop or > 2% spike)
+                                        if (diff < -5 || diff > 2) {
+                                            return (
+                                                <g>
+                                                    <circle cx={cx} cy={cy} r={6} fill={diff < 0 ? "#ef4444" : "#22c55e"} stroke="#fff" strokeWidth={2} />
+                                                    <text x={cx} y={cy - 15} textAnchor="middle" fill="#fff" fontSize={10} fontWeight="bold">
+                                                        {diff > 0 ? '+' : ''}{diff.toFixed(0)}%
+                                                    </text>
+                                                </g>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                    activeDot={{ r: 8, fill: '#fff', stroke: 'rgba(139,92,246,0.5)', strokeWidth: 4 }}
                                 />
                             </LineChart>
                         </ResponsiveContainer>
@@ -248,17 +288,19 @@ const Dashboard = ({ analysis, setStep }) => {
 
                 {/* Verdict Panel */}
                 <div className="flex flex-col gap-6">
-                    <GlassCard className="flex-1 flex flex-col justify-center items-center text-center relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                        <div className="relative z-10">
-                            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-4 border border-white/10 text-3xl shadow-inner">
-                                {analysis.thumbnail_score >= 8 ? '🔥' : analysis.thumbnail_score >= 5 ? '😐' : '📉'}
+                    {thumbnailPreview && (
+                        <GlassCard className="flex-1 flex flex-col justify-center items-center text-center relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                            <div className="relative z-10">
+                                <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-4 border border-white/10 text-3xl shadow-inner">
+                                    {analysis.thumbnail_score >= 8 ? '🔥' : analysis.thumbnail_score >= 5 ? '😐' : '📉'}
+                                </div>
+                                <h3 className="text-3xl font-bold text-white mb-2">{analysis.thumbnail_score}/10</h3>
+                                <p className="text-white/40 text-sm uppercase tracking-wider font-medium">Thumbnail CTR</p>
+                                <p className="text-white/80 text-sm mt-4 px-4 leading-relaxed">"{analysis.thumbnail_feedback}"</p>
                             </div>
-                            <h3 className="text-3xl font-bold text-white mb-2">{analysis.thumbnail_score}/10</h3>
-                            <p className="text-white/40 text-sm uppercase tracking-wider font-medium">Thumbnail CTR</p>
-                            <p className="text-white/80 text-sm mt-4 px-4 leading-relaxed">"{analysis.thumbnail_feedback}"</p>
-                        </div>
-                    </GlassCard>
+                        </GlassCard>
+                    )}
 
                     <div className="p-6 rounded-3xl bg-gradient-to-r from-indigo-600 to-purple-600 shadow-lg shadow-purple-900/40 border border-white/10 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-3 opacity-20">
@@ -271,6 +313,88 @@ const Dashboard = ({ analysis, setStep }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Retention Drop Analysis */}
+            {analysis.retention_drops && analysis.retention_drops.length > 0 && (
+                <GlassCard>
+                    <h3 className="text-lg font-medium text-white/90 flex items-center gap-2 mb-6">
+                        <TrendingDown size={18} className="text-red-400" /> Retention Drop Analysis
+                    </h3>
+                    <div className="space-y-4">
+                        {analysis.retention_drops.map((drop, i) => (
+                            <div key={i} className="bg-[#1a1a1a] border border-red-500/20 rounded-2xl p-6 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-red-500/50" />
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    <div className="flex-shrink-0 text-center md:text-left">
+                                        <div className="text-3xl font-bold text-red-400">{drop.timestamp}</div>
+                                        <div className="text-[10px] text-white/40 uppercase tracking-wider font-bold mt-1">TIMESTAMP</div>
+                                    </div>
+                                    <div className="flex-1 space-y-4">
+                                        <div>
+                                            <div className="flex items-center gap-2 text-red-400 font-bold text-sm mb-1">
+                                                <AlertTriangle size={14} /> Drop Detected
+                                            </div>
+                                            <p className="text-white/80 leading-relaxed text-sm">
+                                                {drop.description}
+                                            </p>
+                                        </div>
+                                        <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-4">
+                                            <div className="flex items-center gap-2 text-teal-400 font-bold text-xs uppercase tracking-wider mb-2">
+                                                <Lightbulb size={12} /> Fix
+                                            </div>
+                                            <p className="text-teal-100 text-sm leading-relaxed font-medium">
+                                                {drop.fix}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </GlassCard>
+            )}
+
+            {/* Script Optimization */}
+            {analysis.script_optimizations && analysis.script_optimizations.length > 0 && (
+                <GlassCard>
+                    <h3 className="text-lg font-medium text-white/90 flex items-center gap-2 mb-6">
+                        <Lightbulb size={18} className="text-yellow-400" /> Script Optimization
+                    </h3>
+                    <div className="space-y-4">
+                        {analysis.script_optimizations.map((opt, i) => (
+                            <div key={i} className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6">
+                                <div className="grid md:grid-cols-2 gap-8 items-center">
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-2">
+                                            <AlertCircle size={12} /> Original Weakness
+                                        </div>
+                                        <p className="text-white/60 line-through decoration-red-500/50 decoration-2 text-lg font-serif italic leading-relaxed">
+                                            "{opt.original}"
+                                        </p>
+                                    </div>
+
+                                    <div className="relative">
+                                        <div className="absolute -left-4 top-1/2 -translate-y-1/2 hidden md:block text-white/20">
+                                            <ArrowRight size={20} />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <div className="text-xs font-bold text-green-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Sparkles size={12} /> AI Improvement
+                                            </div>
+                                            <p className="text-white font-medium text-lg leading-relaxed">
+                                                "{opt.improvement}"
+                                            </p>
+                                            <p className="text-white/40 text-xs italic">
+                                                "{opt.explanation}"
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </GlassCard>
+            )}
 
             {/* Comments Section */}
             <GlassCard>
@@ -378,12 +502,26 @@ const StudioPage = () => {
         Return a VALID JSON object (NO MARKDOWN) with this structure:
         {
           "retention_curve": [
-            {"time": "0:00", "score": 100, "event": "Intro"},
-            ... (10-15 points every 30-60s, score 0-100)
+            {"time": "0:00", "score": 100, "segment": "Opening line..."},
+            ... (10-15 points, score 0-100, "segment": "The specific line/topic at this moment")
           ],
           "comments": [
             {"agent": "The Skimmer", "text": "...", "timestamp": "0:45", "sentiment": "negative"},
             ... (5-8 realistic comments)
+          ],
+          "retention_drops": [
+            {
+              "timestamp": "0:40",
+              "description": "Explanation of why the audience is dropping off...",
+              "fix": "Specific suggestion to fix the script..."
+            }
+          ],
+          "script_optimizations": [
+            {
+              "original": "The original weak line from the script...",
+              "improvement": "The rewritten, better version...",
+              "explanation": "Why this change works better..."
+            }
           ],
           "thumbnail_score": 8, (0-10 integer),
           "thumbnail_feedback": "Short feedback...",
@@ -428,6 +566,24 @@ const StudioPage = () => {
                     console.error('Error saving to Firestore:', firestoreError);
                     // Continue even if Firestore save fails
                 }
+            } else {
+                // Save to localStorage for non-logged in users
+                try {
+                    const historyItem = {
+                        id: Date.now().toString(),
+                        script,
+                        audience,
+                        thumbnail: thumbnailPreview || null,
+                        analysis: jsonResult,
+                        timestamp: Date.now()
+                    };
+                    const existingHistory = JSON.parse(localStorage.getItem('prism_analysis_history') || '[]');
+                    const newHistory = [historyItem, ...existingHistory].slice(0, 20); // Limit to 20 items
+                    localStorage.setItem('prism_analysis_history', JSON.stringify(newHistory));
+                    console.log('Analysis saved to localStorage');
+                } catch (storageError) {
+                    console.error('Error saving to localStorage:', storageError);
+                }
             }
 
             clearInterval(interval);
@@ -444,14 +600,14 @@ const StudioPage = () => {
     };
 
     return (
-        <div className="container mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
             {step !== 1 && (
                 <nav className="flex justify-between items-center mb-10">
                     <div onClick={() => navigate('/')} className="flex items-center gap-3 font-semibold text-lg tracking-tight text-white/90 cursor-pointer hover:opacity-80 transition-opacity">
-                        <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
-                            <img src={logo} alt="Prism Logo" className="w-8 h-8 object-contain" />
+                        <div className="flex items-center justify-center">
+                            <img src={logo} alt="Prism Logo" className="w-12 h-12 object-contain" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tight">Prism AI</span>
+                        <span className="text-3xl font-bold tracking-tight">Prism AI</span>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/60 flex items-center gap-2 backdrop-blur-md">
@@ -465,6 +621,11 @@ const StudioPage = () => {
                             <History size={16} />
                             <span>History</span>
                         </button>
+                        {user ? (
+                            <UserProfile />
+                        ) : (
+                            <button onClick={() => navigate('/signin')} className="text-sm text-white/60 hover:text-white transition-colors">Sign In</button>
+                        )}
                     </div>
                 </nav>
             )}
@@ -492,6 +653,7 @@ const StudioPage = () => {
                 <Dashboard
                     analysis={analysis}
                     setStep={setStep}
+                    thumbnailPreview={thumbnailPreview}
                 />
             )}
 

@@ -31,8 +31,8 @@ const SignInPage = () => {
             <div className="relative z-10 w-full max-w-md px-6">
                 <GlassCard className="text-center py-12">
                     <div className="mb-8 flex justify-center">
-                        <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
-                            <img src={logo} alt="Prism Logo" className="w-10 h-10 object-contain" />
+                        <div className="flex items-center justify-center">
+                            <img src={logo} alt="Prism Logo" className="w-20 h-20 object-contain" />
                         </div>
                     </div>
 

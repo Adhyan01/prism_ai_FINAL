@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, Trash2, Eye, Clock, TrendingUp, Calendar } from 'lucide-react';
+import {
+    History, Trash2, Eye, Clock, TrendingUp, Calendar, Activity, TrendingDown, Lightbulb, AlertTriangle, CheckCircle, AlertCircle, Sparkles, ArrowRight
+} from 'lucide-react';
+import {
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
+} from 'recharts';
 import GlassCard from '../components/GlassCard';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
@@ -95,15 +100,15 @@ const HistoryPage = () => {
             </div>
 
             {/* Navbar */}
-            <nav className="container mx-auto px-6 py-6 flex justify-between items-center relative z-10">
+            <nav className="max-w-7xl mx-auto px-4 lg:px-8 py-6 flex justify-between items-center relative z-10">
                 <div
                     onClick={() => navigate('/')}
                     className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md">
-                        <img src={logo} alt="Prism" className="w-8 h-8 object-contain" />
+                    <div className="flex items-center justify-center">
+                        <img src={logo} alt="Prism" className="w-12 h-12 object-contain" />
                     </div>
-                    <span className="text-2xl font-bold tracking-tight">Prism AI</span>
+                    <span className="text-3xl font-bold tracking-tight">Prism AI</span>
                 </div>
                 <div className="flex items-center gap-6">
                     <button
@@ -127,7 +132,7 @@ const HistoryPage = () => {
             </nav>
 
             {/* Main Content */}
-            <main className="container mx-auto px-6 py-12 relative z-10">
+            <main className="max-w-7xl mx-auto px-4 lg:px-8 py-12 relative z-10">
                 {/* Header */}
                 <div className="mb-12">
                     <div className="flex items-center justify-between">
@@ -238,16 +243,184 @@ const HistoryPage = () => {
                                         </div>
                                     </div>
 
+                                    {/* Retention Chart */}
+                                    {selectedAnalysis.analysis.retention_curve && (
+                                        <div className="mb-8 h-[300px] w-full">
+                                            <h3 className="text-lg font-medium text-white/90 flex items-center gap-2 mb-4">
+                                                <Activity size={18} className="text-purple-400" /> Retention Forecast
+                                            </h3>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={selectedAnalysis.analysis.retention_curve}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                                    <XAxis
+                                                        dataKey="time"
+                                                        stroke="rgba(255,255,255,0.3)"
+                                                        tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        dy={10}
+                                                        hide={true}
+                                                    />
+                                                    <YAxis
+                                                        stroke="rgba(255,255,255,0.3)"
+                                                        tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        domain={[0, 100]}
+                                                        dx={-10}
+                                                    />
+                                                    <Tooltip
+                                                        content={({ active, payload }) => {
+                                                            if (active && payload && payload.length) {
+                                                                const data = payload[0].payload;
+                                                                return (
+                                                                    <div className="bg-[#1a1a1a] border border-white/10 p-4 rounded-xl shadow-2xl backdrop-blur-md min-w-[200px] max-w-[300px]">
+                                                                        <p className="text-white font-medium text-sm mb-3 leading-relaxed">
+                                                                            "{data.segment || data.event || '...'}"
+                                                                        </p>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className={`w-2 h-2 rounded-full ${data.score >= 80 ? 'bg-green-500' : data.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                                                                            <span className="text-white font-bold text-lg">
+                                                                                Score: {data.score}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }}
+                                                    />
+                                                    <ReferenceLine y={50} stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
+                                                    <defs>
+                                                        <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                                                            <stop offset="0%" stopColor="#c084fc" />
+                                                            <stop offset="100%" stopColor="#60a5fa" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="score"
+                                                        stroke="url(#lineGradient)"
+                                                        strokeWidth={4}
+                                                        dot={({ cx, cy, payload, index, data }) => {
+                                                            if (index === 0 || !data || !data[index - 1]) return null;
+                                                            const prev = data[index - 1].score;
+                                                            const curr = payload.score;
+                                                            const diff = curr - prev;
+
+                                                            if (diff < -5 || diff > 2) {
+                                                                return (
+                                                                    <g>
+                                                                        <circle cx={cx} cy={cy} r={6} fill={diff < 0 ? "#ef4444" : "#22c55e"} stroke="#fff" strokeWidth={2} />
+                                                                        <text x={cx} y={cy - 15} textAnchor="middle" fill="#fff" fontSize={10} fontWeight="bold">
+                                                                            {diff > 0 ? '+' : ''}{diff.toFixed(0)}%
+                                                                        </text>
+                                                                    </g>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }}
+                                                        activeDot={{ r: 8, fill: '#fff', stroke: 'rgba(139,92,246,0.5)', strokeWidth: 4 }}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    )}
+
                                     <div className="space-y-6">
                                         <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-purple-500/30">
                                             <h3 className="text-sm font-bold text-purple-200 mb-2">Final Verdict</h3>
                                             <p className="text-white">{selectedAnalysis.analysis.overall_verdict}</p>
                                         </div>
 
-                                        <div>
-                                            <h3 className="text-white font-semibold mb-3">Thumbnail Score: {selectedAnalysis.analysis.thumbnail_score}/10</h3>
-                                            <p className="text-white/70 text-sm">{selectedAnalysis.analysis.thumbnail_feedback}</p>
-                                        </div>
+                                        {/* Retention Drop Analysis */}
+                                        {selectedAnalysis.analysis.retention_drops && selectedAnalysis.analysis.retention_drops.length > 0 && (
+                                            <div>
+                                                <h3 className="text-lg font-medium text-white/90 flex items-center gap-2 mb-4">
+                                                    <TrendingDown size={18} className="text-red-400" /> Retention Drop Analysis
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    {selectedAnalysis.analysis.retention_drops.map((drop, i) => (
+                                                        <div key={i} className="bg-[#1a1a1a] border border-red-500/20 rounded-2xl p-6 relative overflow-hidden">
+                                                            <div className="absolute top-0 left-0 w-1 h-full bg-red-500/50" />
+                                                            <div className="flex flex-col md:flex-row gap-6">
+                                                                <div className="flex-shrink-0 text-center md:text-left">
+                                                                    <div className="text-3xl font-bold text-red-400">{drop.timestamp}</div>
+                                                                    <div className="text-[10px] text-white/40 uppercase tracking-wider font-bold mt-1">TIMESTAMP</div>
+                                                                </div>
+                                                                <div className="flex-1 space-y-4">
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2 text-red-400 font-bold text-sm mb-1">
+                                                                            <AlertTriangle size={14} /> Drop Detected
+                                                                        </div>
+                                                                        <p className="text-white/80 leading-relaxed text-sm">
+                                                                            {drop.description}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-4">
+                                                                        <div className="flex items-center gap-2 text-teal-400 font-bold text-xs uppercase tracking-wider mb-2">
+                                                                            <Lightbulb size={12} /> Fix
+                                                                        </div>
+                                                                        <p className="text-teal-100 text-sm leading-relaxed font-medium">
+                                                                            {drop.fix}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Script Optimization */}
+                                        {selectedAnalysis.analysis.script_optimizations && selectedAnalysis.analysis.script_optimizations.length > 0 && (
+                                            <div>
+                                                <h3 className="text-lg font-medium text-white/90 flex items-center gap-2 mb-4">
+                                                    <Lightbulb size={18} className="text-yellow-400" /> Script Optimization
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    {selectedAnalysis.analysis.script_optimizations.map((opt, i) => (
+                                                        <div key={i} className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6">
+                                                            <div className="grid md:grid-cols-2 gap-8 items-center">
+                                                                <div className="space-y-2">
+                                                                    <div className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-2">
+                                                                        <AlertCircle size={12} /> Original Weakness
+                                                                    </div>
+                                                                    <p className="text-white/60 line-through decoration-red-500/50 decoration-2 text-lg font-serif italic leading-relaxed">
+                                                                        "{opt.original}"
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="relative">
+                                                                    <div className="absolute -left-4 top-1/2 -translate-y-1/2 hidden md:block text-white/20">
+                                                                        <ArrowRight size={20} />
+                                                                    </div>
+                                                                    <div className="space-y-3">
+                                                                        <div className="text-xs font-bold text-green-400 uppercase tracking-wider flex items-center gap-2">
+                                                                            <Sparkles size={12} /> AI Improvement
+                                                                        </div>
+                                                                        <p className="text-white font-medium text-lg leading-relaxed">
+                                                                            "{opt.improvement}"
+                                                                        </p>
+                                                                        <p className="text-white/40 text-xs italic">
+                                                                            "{opt.explanation}"
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedAnalysis.thumbnail && (
+                                            <div>
+                                                <h3 className="text-white font-semibold mb-3">Thumbnail Score: {selectedAnalysis.analysis.thumbnail_score}/10</h3>
+                                                <p className="text-white/70 text-sm">{selectedAnalysis.analysis.thumbnail_feedback}</p>
+                                            </div>
+                                        )}
 
                                         <div>
                                             <h3 className="text-white font-semibold mb-3">AI Comments ({selectedAnalysis.analysis.comments.length})</h3>
@@ -285,7 +458,7 @@ const HistoryPage = () => {
             </main>
 
             {/* Footer */}
-            <footer className="container mx-auto px-6 py-8 text-center text-white/20 text-sm relative z-10">
+            <footer className="max-w-7xl mx-auto px-4 lg:px-8 py-8 text-center text-white/20 text-sm relative z-10">
                 &copy; 2025 Prism AI. All rights reserved.
             </footer>
         </div>

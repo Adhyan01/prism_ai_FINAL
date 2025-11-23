@@ -74,15 +74,15 @@ const PricingPage = () => {
             </div>
 
             {/* Navbar */}
-            <nav className="container mx-auto px-6 py-6 flex justify-between items-center relative z-10">
+            <nav className="max-w-7xl mx-auto px-4 lg:px-8 py-6 flex justify-between items-center relative z-10">
                 <div
                     onClick={() => navigate('/')}
                     className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md">
-                        <img src={logo} alt="Prism" className="w-8 h-8 object-contain" />
+                    <div className="flex items-center justify-center">
+                        <img src={logo} alt="Prism" className="w-12 h-12 object-contain" />
                     </div>
-                    <span className="text-2xl font-bold tracking-tight">Prism AI</span>
+                    <span className="text-3xl font-bold tracking-tight">Prism AI</span>
                 </div>
                 <div className="flex items-center gap-6">
                     <button
@@ -106,7 +106,7 @@ const PricingPage = () => {
             </nav>
 
             {/* Main Content */}
-            <main className="container mx-auto px-6 py-20 relative z-10">
+            <main className="max-w-7xl mx-auto px-4 lg:px-8 py-20 relative z-10">
                 {/* Header */}
                 <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6">
@@ -245,7 +245,7 @@ const PricingPage = () => {
             </main>
 
             {/* Footer */}
-            <footer className="container mx-auto px-6 py-8 text-center text-white/20 text-sm relative z-10">
+            <footer className="max-w-7xl mx-auto px-4 lg:px-8 py-8 text-center text-white/20 text-sm relative z-10">
                 &copy; 2025 Prism AI. All rights reserved.
             </footer>
         </div>
